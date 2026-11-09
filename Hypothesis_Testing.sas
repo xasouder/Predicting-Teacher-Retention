@@ -75,7 +75,12 @@ run;
 proc ttest data = yearreteacher;
 	class Consider_Leaving;
     var Years_Continue_toWork;run;
-    
+/*Wilcoxon test*/
+proc npar1way data=yearreteacher wilcoxon dscf plots=all;
+    class Consider_Leaving;
+    var Years_Continue_toWork;
+run;
+
 /* Difference for age worked and sex*/
 *Males are slightly younger than females;
 proc univariate data=yearreteacher normal plots cibasic;
@@ -155,6 +160,8 @@ proc sgplot data=reteacher;
    vbox age / group=Job_Useless grouporder=descending;
    keylegend / title="Boxplot for Age of Teachers by Feelings of Their Job being Useless";
 run;
+/**************CHI-SQ***************/
+proc freq data = reteacher;tables sex*consider_leaving/all;run;
 
 /***************************CORRELATIONS************************************/
 proc corr data=reteacher;
@@ -163,6 +170,16 @@ run;
 
 /* Difference between years worked*/
 proc corr data=reteacher;
-	var age Sex Years_Continue_toWork Years_atSchool Years_Worked;
+	var Years_Continue_toWork Years_atSchool Years_Worked Consider_Leaving Sex Age;
 run;
 
+*correlational analysis;
+proc corr data = yearreteacher;
+	var Years_Continue_toWork Years_atSchool Years_Worked Consider_Leaving 
+	age Sex NotThinking_Clearly Distracted Easy_Concentrate 
+	Felt_Focused Cheerful Calm_Relaxed Active_Rigorous Fresh_Rested
+	Interested_Daily_Activities Hard_Think_Complicated Think_Slower
+	Done_All_atWork Job_Useless Purpose_Work Trivial_Daily_Activities
+	Enjoy_Future_Workplans Rely_Management Principal_Confidence 
+	Colleagues_Trust_Me Teacher_Rely_Others Trust_Colleagues Enough_Time 
+	Too_Much_Work Meet_Expectations Time_For_Breaks noTime_Personal Tasks_Affect_Teach;run;

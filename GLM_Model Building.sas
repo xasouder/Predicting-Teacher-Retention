@@ -26,14 +26,14 @@ proc freq data =yearreteacher;
 	
 /*model full selection*/
 proc GLMSELECT data=teachertrain;
-	class NotThinking_Clearly Hard_Think_Complicated Think_Slower Distracted Easy_Concentrate
+	class sex NotThinking_Clearly Hard_Think_Complicated Think_Slower Distracted Easy_Concentrate
     Felt_Focused Cheerful Calm_Relaxed Active_Rigorous Fresh_Rested Interested_Daily_Activities
     Purpose_Work Trivial_Daily_Activities Enjoy_Future_Workplans Done_All_atWork Job_Useless
     Rely_Management Principal_Confidence Colleagues_Trust_Me Teacher_Rely_Others
 	Trust_Colleagues Enough_Time Too_Much_Work Meet_Expectations Time_For_Breaks 
 	noTime_Personal Tasks_Affect_Teach;
     
-    model Years_Continue_toWork = NotThinking_Clearly Hard_Think_Complicated Think_Slower 
+    model Years_Continue_toWork = sex NotThinking_Clearly Hard_Think_Complicated Think_Slower 
     Distracted Easy_Concentrate Felt_Focused Cheerful Calm_Relaxed Active_Rigorous 
     Fresh_Rested Interested_Daily_Activities Purpose_Work Trivial_Daily_Activities 
     Enjoy_Future_Workplans Done_All_atWork Job_Useless Rely_Management Principal_Confidence 
@@ -43,21 +43,73 @@ run;
 
 /*Full model final version*/
 proc glm data = teachertrain;
-	class Job_Useless Enjoy_Future_Workplans noTime_Personal Done_All_atWork Cheerful 
-	Principal_Confidence Purpose_Work Easy_Concentrate Meet_Expectations;
-	model Years_Continue_toWork = Job_Useless Enjoy_Future_Workplans noTime_Personal
-	Done_All_atWork Cheerful Principal_Confidence Purpose_Work Easy_Concentrate Meet_Expectations
+	class sex Easy_Concentrate cheerful Purpose_Work Enjoy_Future_Workplans
+	Job_Useless Done_All_atWork Principal_Confidence noTime_Personal Meet_Expectations;
+	model Years_Continue_toWork = sex Easy_Concentrate cheerful Purpose_Work Enjoy_Future_Workplans
+	Job_Useless Done_All_atWork Principal_Confidence noTime_Personal Meet_Expectations
 	/ effectsize;
 	code file = "/home/u64123092/nonpara/glmfullmodel.sas";
 run;
 
-data scored_data_full; 
-set teachervalid;
-%include "/home/u64123092/nonpara/glmfullmodel.sas";
-
-proc sgplot data=scored_data;
-  hbox P_years_continue_towork;
+/*Score the Training Data */
+data scored_data_train; 
+    set teachertrain;
+    %include "/home/u64123092/nonpara/glmfullmodel.sas";
 run;
+
+/*Score the Test Data */
+data scored_data_test; 
+    set teachervalid;
+    %include "/home/u64123092/nonpara/glmfullmodel.sas";
+run;
+
+/* Calculate squared errors for Train data */
+data scored_data_train;
+    set scored_data_train;
+    Residual = Years_Continue_toWork - P_Years_Continue_toWork;
+    SqError = Residual**2;
+run;
+
+/* Calculate squared errors for Test data */
+data scored_data_test;
+    set scored_data_test;
+    Residual = Years_Continue_toWork - P_Years_Continue_toWork;
+    SqError = Residual**2;
+run;
+
+/* Get RMSE for Train */
+proc means data=scored_data_train mean noprint;
+    var SqError;
+    output out=train_rmse mean=MeanSqError;
+run;
+data train_rmse;
+    set train_rmse;
+    RMSE = sqrt(MeanSqError);
+    Dataset = "Train";
+    keep Dataset RMSE;
+run;
+
+/* Get RMSE for Test */
+proc means data=scored_data_test mean noprint;
+    var SqError;
+    output out=test_rmse mean=MeanSqError;
+run;
+data test_rmse;
+    set test_rmse;
+    RMSE = sqrt(MeanSqError);
+    Dataset = "Test";
+    keep Dataset RMSE;
+run;
+
+/* Combine and display results */
+data model_performance;
+    set train_rmse test_rmse;
+run;
+
+proc print data=model_performance noobs;
+    title "Model Performance Comparison (RMSE)";
+run;
+
 
 
 /*******MODEL 1 BUILDING********/
